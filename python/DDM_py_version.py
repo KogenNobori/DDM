@@ -1,5 +1,5 @@
 # importing modules
-# %matplotlib widget
+# %matplotlib widget # commented out as it caused error for .py script and it functions ok without this line for .py.
 
 import os
 import cv2
@@ -12,14 +12,17 @@ from tqdm.auto import tqdm
 from scipy.optimize import leastsq
 # Lacked in the original code 
 from matplotlib import cm
+# Using pathlib
+from pathlib import Path
+
 
 # Set environment variables for OpenCV
 os.environ['OPENCV_LOG_LEVEL'] = 'FATAL'
 os.environ['OPENCV_FFMPEG_LOGLEVEL'] = "-8"
 
 
-############## variables ##############
-video_file = "/Volumes/MyMedia SSD/KogenNobori_DCF_E1a_2026/data_stand1/Concentrationdiff2mium/rt/1-50_10s_32p945fps_rt-0000.avi" # Change this to the name of the video file you want to analyse
+############## Variables ##############
+video_file = "/Volumes/T7 Shield/e1_stand1/data/Concentrationdiff2mium/rt/1-5000_10s_32p945fps_rt-0000.avi" # Change this to the name of the video file you want to analyse
 pixelSize = 100/844.341 #40x (in micrometre)
 
 pointsPerDecade = 30
@@ -193,6 +196,12 @@ stack = ImageStack(video_file)
 # plt.ylabel('Intensity [a.u.]')
 # plt.title('Radial Average of the Time Averaged Spectrum')
 
+##### Outputting filename ####
+file_path = Path(video_file) #https://note.nkmk.me/python-pathlib-name-suffix-parent/#google_vignette #https://docs.python.org/ja/3/library/pathlib.html#pathlib.PurePath.name #https://docs.python.org/3.15/library/pathlib.html#
+print('filename:', file_path.name)
+
+####
+
 
 # calculate isf
 
@@ -283,7 +292,7 @@ plt.ylim(10, 1e5)
 plt.show()
 
 
-# ISF for various q for function of tau and q**r
+# ISF for various q for function of tau and q**2r
 plt.figure(figsize=(14,8))
 ax1 = plt.subplot(1,2,1)
 for i,iq in enumerate(np.logspace(np.log10(iqmin),np.log10(iqmax),10, base=10).astype(int)):
@@ -321,6 +330,8 @@ X, alpha = leastsq(
     )[0]
 X= np.exp(-X)
 plt.plot([qs[iqmin], qs[iqmax]], 1/(X*np.array([qs[iqmin], qs[iqmax]])**alpha), '-r')
+plt.title('Free exponent fitting')
+
 plt.show()
 
 print(f"alpha = {alpha:.02f}")
@@ -340,6 +351,8 @@ D = np.exp(-leastsq(
     args=(qs[iqmin:iqmax], params[iqmin:iqmax,2])
     )[0][0])
 plt.plot([qs[iqmin], qs[iqmax]], 1/(D*np.array([qs[iqmin], qs[iqmax]])**2), '-r')
+plt.title("Slope forced to -2")
+
 plt.show()
 print(f"D = {D:.02f} µm²/s")
 
