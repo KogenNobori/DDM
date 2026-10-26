@@ -1,0 +1,112 @@
+(ddmenv3) noboriwatarugen@Kogens-MacBook-Air-2 ddm_github_forked % /opt/miniconda3/envs/ddmenv3/bin/python /Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py
+filename: 2micro_1-50_10s_100fps_753F-0000.avi
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 53/53 [00:27<00:00,  1.93it/s]
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in exp
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in multiply
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:231: RuntimeWarning: Number of calls to function has reached maxfev = 800.
+  params[iq] = leastsq(
+Selected range: 1.33 to 6.71
+2026-10-21 17:11:11.627 python[65590:2386967] error messaging the mach port for IMKCFRunLoopWakeUpReliable
+alpha = 1.93
+X = 0.80
+D = 0.73 µm²/s
+D theory = 0.24 µm²/s
+Diameter = 0.67 µm
+(ddmenv3) noboriwatarugen@Kogens-MacBook-Air-2 ddm_github_forked % /opt/miniconda3/envs/ddmenv3/bin/python /Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py
+filename: 1-50_10s_32p945fps_rt-0000.avi
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 52/52 [00:27<00:00,  1.91it/s]
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in exp
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in multiply
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:231: RuntimeWarning: Number of calls to function has reached maxfev = 800.
+  params[iq] = leastsq(
+Selected range: 1.53 to 5.31
+alpha = 1.92
+X = 0.19
+D = 0.17 µm²/s
+D theory = 0.24 µm²/s
+Diameter = 2.81 µm
+(ddmenv3) noboriwatarugen@Kogens-MacBook-Air-2 ddm_github_forked % /opt/miniconda3/envs/ddmenv3/bin/python /Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py
+filename: 1-100_10s_32p945fps_rt-0000.avi
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 52/52 [00:26<00:00,  1.93it/s]
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in exp
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in multiply
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:231: RuntimeWarning: Number of calls to function has reached maxfev = 800.
+  params[iq] = leastsq(
+Selected range: 1.66 to 4.97
+2026-10-21 17:19:03.213 python[66396:2398890] error messaging the mach port for IMKCFRunLoopWakeUpReliable
+alpha = 1.95
+X = 0.23
+D = 0.22 µm²/s
+D theory = 0.24 µm²/s
+Diameter = 2.25 µm
+(ddmenv3) noboriwatarugen@Kogens-MacBook-Air-2 ddm_github_forked % /opt/miniconda3/envs/ddmenv3/bin/python /Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py
+filename: 1-600_10s_32p945fps_rt-0000.avi
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 52/52 [00:26<00:00,  1.93it/s]
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in exp
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in multiply
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:231: RuntimeWarning: Number of calls to function has reached maxfev = 800.
+  params[iq] = leastsq(
+2026-10-21 17:19:58.466 python[66783:2401725] error messaging the mach port for IMKCFRunLoopWakeUpReliable
+Selected range: 1.33 to 4.39
+alpha = 1.76
+X = 0.24
+D = 0.19 µm²/s
+D theory = 0.24 µm²/s
+Diameter = 2.58 µm
+(ddmenv3) noboriwatarugen@Kogens-MacBook-Air-2 ddm_github_forked % /opt/miniconda3/envs/ddmenv3/bin/python /Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py
+filename: 1-1200_10s_32p945fps_rt_v2-0000.avi
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 52/52 [00:26<00:00,  1.93it/s]
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in exp
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:231: RuntimeWarning: Number of calls to function has reached maxfev = 800.
+  params[iq] = leastsq(
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in multiply
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+2026-10-21 17:21:16.920 python[67147:2404777] error messaging the mach port for IMKCFRunLoopWakeUpReliable
+Selected range: 1.53 to 1.87
+Selected range: 2.61 to 4.10
+alpha = 2.01
+X = 0.25
+D = 0.25 µm²/s
+D theory = 0.24 µm²/s
+Diameter = 1.96 µm
+(ddmenv3) noboriwatarugen@Kogens-MacBook-Air-2 ddm_github_forked % /opt/miniconda3/envs/ddmenv3/bin/python /Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py
+filename: 1-2000_10s_32p945fps_rt-0000.avi
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 52/52 [00:26<00:00,  1.94it/s]
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in exp
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in multiply
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:231: RuntimeWarning: Number of calls to function has reached maxfev = 800.
+  params[iq] = leastsq(
+2026-10-21 17:29:28.998 python[67539:2408230] error messaging the mach port for IMKCFRunLoopWakeUpReliable
+Selected range: 1.20 to 4.64
+alpha = 2.13
+X = 0.24
+D = 0.27 µm²/s
+D theory = 0.24 µm²/s
+Diameter = 1.79 µm
+(ddmenv3) noboriwatarugen@Kogens-MacBook-Air-2 ddm_github_forked % /opt/miniconda3/envs/ddmenv3/bin/python /Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py
+filename: 1-5000_10s_32p945fps_rt-0000.avi
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 52/52 [00:26<00:00,  1.95it/s]
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in exp
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:37: RuntimeWarning: overflow encountered in multiply
+  LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+/Users/noboriwatarugen/e1/ddm_github_forked/python/DDM_py_version.py:231: RuntimeWarning: Number of calls to function has reached maxfev = 800.
+  params[iq] = leastsq(
+2026-10-21 17:30:41.146 python[67953:2415300] error messaging the mach port for IMKCFRunLoopWakeUpReliable
+Selected range: 1.78 to 4.60
+alpha = 1.90
+X = 0.24
+D = 0.22 µm²/s
+D theory = 0.24 µm²/s
+Diameter = 2.23 µm
