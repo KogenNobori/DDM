@@ -21,7 +21,6 @@ import re
 # scienceplots
 import scienceplots
 
-
 # Set environment variables for OpenCV
 os.environ['OPENCV_LOG_LEVEL'] = 'FATAL'
 os.environ['OPENCV_FFMPEG_LOGLEVEL'] = "-8"
@@ -30,23 +29,27 @@ os.environ['OPENCV_FFMPEG_LOGLEVEL'] = "-8"
 # plt.style.use('science')
 
 ############## Variables ##############
-folder_name = '/Volumes/T7 Shield/e1_stand1/data/Concentrationdiff2mium/rt/'
-# video_file = "/Volumes/T7 Shield/e1_stand1/data/Concentrationdiff2mium/rt/1-5000_10s_32p945fps_rt-0000.avi" # Change this to the name of the video file you want to analyse
+folder_name = '/Volumes/T7 Shield/e1_stand1/data/Concentrationdiff2mium/rt/' # Input the folder to analyse
+out_dir = '/Users/noboriwatarugen/e1/ddm_github_forked/python/csvs/' # remember to add / in the end
+
 pixelSize = 100/844.341 #40x (in micrometre)
 
 pointsPerDecade = 30
 maxNCouples = 3 #10 for fast evaluation, 300 for accurate analysis
 
 kB = 1.38e-23
-T = 273.15+23.1 # measured room temperature
-mu = 8.9e-4
-a = 2e-6 #change this to the diameter of the particle in metres
+T = 273.15+23.1 # measured room temperatur 
+mu = 8.9e-4 # change this value later
+
+ballistic = False
 
 ###### Choose the correlation function###
 
-LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
+if ballistic: # if ballistic is true, use the correlation function for the ballistic motion
+    LogISF = lambda p, dts: np.log(p[0] * (1-(np.sin(dts/p[2])/(dts/p[2]))) + p[1]) 
 
-#LogISF = lambda p, dts: np.log(p[0] * (1-(np.sin(dts/p[2])/(dts/p[2]))) + p[1]) 
+else: # correlation function for the Brownian motion
+    LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
 
 
 
@@ -154,81 +157,47 @@ def onselect(xmin, xmax):
     iqmax = np.searchsorted(qs, xmax)
     print(f"Selected range: {qs[iqmin]:.2f} to {qs[iqmax]:.2f}")
 
+
+p_size_dict = {'2':2, '2p12':2.12, '0_977u':0.977, '1_73u':1.73,'2u':2,'1p73':1.73,'01':0.1,'1':1,'03':0.3,'173':1.73 } # https://www.sejuku.net/blog/24122
+
+
 ####Storing the results in dataframe 
-df = pd.DataFrame(columns = ['Dilution','Frame rate','qmin', 'qmax','alpha','X','D','D theory','Diameter']) # https://pandas.pydata.org/docs/dev/reference/api/pandas.DataFrame.html
-# print(df)
+data_columns = ['Particle size','Dilution','Frame rate','Number of frames','qmin', 'qmax','alpha','X','D (Brownian)','D theory (Brownian)','Predicted Diameter (Brownian)', 'Velocity(for ballistic)']
+df = pd.DataFrame(columns = data_columns) # https://pandas.pydata.org/docs/dev/reference/api/pandas.DataFrame.html
+
+# df.to_csv(out_dir+'test.csv')
 
 
-##### Path###### # https://note.nkmk.me/python-pathlib-iterdir-glob/
+########### Path ########### https://note.nkmk.me/python-pathlib-iterdir-glob/
 folder_path = Path(folder_name) 
 video_file_paths = list(folder_path.glob('*.avi'))  
 print('video file paths', list(map(str, video_file_paths))) # https://note.nkmk.me/python-map-usage/
 print('number of files to analise:', len(video_file_paths))
-
+parent_dir_name = folder_path.parents[0].name # https://note.nkmk.me/python-pathlib-name-suffix-parent/
+##########################
 
 for video_file in video_file_paths:
-    ##### Outputting filename ####
+    ##### Extracting information from the filename ####
     # file_path = Path(video_file) #https://note.nkmk.me/python-pathlib-name-suffix-parent/#google_vignette #https://docs.python.org/ja/3/library/pathlib.html#pathlib.PurePath.name #https://docs.python.org/3.15/library/pathlib.html#
     print('filename:', video_file.name)
     dil = int(re.findall('1-(.*?)_',video_file.name)[0]) # https://note.nkmk.me/python-str-extract/#research-refindall
     print('Dilution:', dil)
 
-    ####
+    p_size = re.findall('([0-9].*?)m',video_file.name) # https://note.nkmk.me/python-str-extract/#research-refindall
 
-    ######### Checking the data########
+    if len(p_size)==1 and p_size in p_size_dict.keys(): # If the code only catches one string and it matches one of the keys,
+        a = p_size_dict(p_size[0]) #change this to the diameter of the particle in metres
+
+    else:
+        print('Particle size not found. Please input the particle size in micro metre')
+        a = int(input())
+
+
+    ########### Reading the data###########
     stack = ImageStack(video_file)
 
 
-    # plt.figure(figsize=(14,4))
-    # plt.suptitle('Checking the Image Stack')
-    # subplot(1,3,1).imshow(stack[0], 'gray')
-    # subplot(1,3,1).set_title('First Frame')
-    # subplot(1,3,2).imshow(stack[-1], 'gray')
-    # subplot(1,3,2).set_title('Last Frame')
-    # subplot(1,3,3).imshow(np.abs(stack[-1]-stack[0]).astype(float), 'gray')
-    # subplot(1,3,3).set_title('Difference')
-
-
-    # plt.figure(figsize=(14,4))
-    # plt.suptitle('Spectra for different lag times')
-    # max_v = np.percentile(np.fft.fftshift(spectrumDiff(stack[0], stack[3])),99)
-    # subplot(1,3,1).imshow(np.fft.fftshift(spectrumDiff(stack[0], stack[3])), 'hot',vmin=0, vmax=max_v)
-    # subplot(1,3,1).set_title(r'$\tau = 0.1s$')
-    # subplot(1,3,2).imshow(np.fft.fftshift(spectrumDiff(stack[0], stack[30])), 'hot',vmin=0, vmax=max_v)
-    # subplot(1,3,2).set_title(r'$\tau = 1s$')
-    # subplot(1,3,3).imshow(np.fft.fftshift(spectrumDiff(stack[0], stack[300])), 'hot',vmin=0, vmax=max_v)
-    # subplot(1,3,3).set_title(r'$\tau = 10s$')
-
-
-    # time averaged spectra
-    # plt.figure(figsize=(14,4))
-    # plt.suptitle('Time Averaged Spectra')
-
-    # timeAverage_3 = timeAveraged(stack, 3, 5)
-    # timeAverage_30 = timeAveraged(stack, 30, 5)
-    # timeAverage_300 = timeAveraged(stack, 300, 5)
-
-    # subplot(1,3,1).imshow(np.fft.fftshift(timeAverage_3), 'hot',vmin=0, vmax=max_v)
-    # subplot(1,3,1).set_title('Time Average (dt = 3s)')
-    # subplot(1,3,2).imshow(np.fft.fftshift(timeAverage_30), 'hot',vmin=0, vmax=max_v)
-    # subplot(1,3,2).set_title('Time Average (dt = 30s)')
-    # subplot(1,3,3).imshow(np.fft.fftshift(timeAverage_300), 'hot',vmin=0, vmax=max_v)
-    # subplot(1,3,3).set_title('Time Average (dt = 300s)')
-
-    # radial average of the spectrum
-    # plt.figure(figsize=(5,5))
-    # ra = RadialAverager(stack.shape)
-    # plt.plot(ra(timeAverage_30))
-    # plt.xscale('log')
-    # plt.yscale('log')
-    # plt.xlabel('q [px$^{-1}$]')
-    # plt.ylabel('Intensity [a.u.]')
-    # plt.title('Radial Average of the Time Averaged Spectrum')
-
-
-
-
-    # calculate isf
+    ########## calculate isf ###########
 
     idts = logSpaced(len(stack), pointsPerDecade)
     dts = idts/stack.fps
@@ -277,7 +246,6 @@ for video_file in video_file_paths:
     span = SpanSelector(ax, onselect, 'horizontal', useblit=True, interactive=True, props=dict(alpha=0.5, facecolor='red'))
     plt.show()
 
-    input()
 
     # show A and B
     plt.figure(figsize=(8,6))
@@ -364,69 +332,67 @@ for video_file in video_file_paths:
     print(f"alpha = {alpha:.02f}")
     print(f"X = {X:.02f}")
 
-    #Brownian motion
-    plt.figure(figsize=(8,6))
-    plt.plot(qs, params[:,2], 'o')
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.xlabel(r'$q\,(\mu m^{-1})$')
-    plt.ylabel(r'Characteristic time $\tau_c (s)$')
-    plt.axvspan(qs[iqmin], qs[iqmax], color=(0.9,0.9,0.9))
-    D = np.exp(-leastsq(
-        lambda p, q, td: p[0] - 2*np.log(q) - np.log(td),
-        [-1.],
-        args=(qs[iqmin:iqmax], params[iqmin:iqmax,2])
-        )[0][0])
-    plt.plot([qs[iqmin], qs[iqmax]], 1/(D*np.array([qs[iqmin], qs[iqmax]])**2), '-r')
-    plt.title("Slope forced to -2")
+    D = 'None'
+    D_theory = 'None'
+    Diameter = 'None'
 
-    plt.show()
-    print(f"D = {D:.02f} µm²/s")
+    if not ballistic:
+        # Brownian motion
+        plt.figure(figsize=(8,6))
+        plt.plot(qs, params[:,2], 'o')
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel(r'$q\,(\mu m^{-1})$')
+        plt.ylabel(r'Characteristic time $\tau_c (s)$')
+        plt.axvspan(qs[iqmin], qs[iqmax], color=(0.9,0.9,0.9))
+        D = np.exp(-leastsq(
+            lambda p, q, td: p[0] - 2*np.log(q) - np.log(td),
+            [-1.],
+            args=(qs[iqmin:iqmax], params[iqmin:iqmax,2])
+            )[0][0])
+        plt.plot([qs[iqmin], qs[iqmax]], 1/(D*np.array([qs[iqmin], qs[iqmax]])**2), '-r')
+        plt.title("Slope forced to -2")
+
+        plt.show()
+        print(f"D = {D:.02f} µm²/s")
 
 
 
-    # D theory
-    D_theory = kB*T/(3*np.pi*mu*a) * 1e12
-    print(f"D theory = {D_theory:.02f} µm²/s")
+        # D theory
+        D_theory = kB*T/(3*np.pi*mu*a) * 1e12
+        print(f"D theory = {D_theory:.02f} µm²/s")
 
-    # estimate the size of the particle
-    predicted_a = kB*T/(3*np.pi*mu*D) *1e12*1e6
-    print(f"Diameter = {predicted_a:.02f} µm")
+        # estimate the size of the particle
+        predicted_a = kB*T/(3*np.pi*mu*D) *1e12*1e6
+        print(f"Diameter = {predicted_a:.02f} µm")
 
 
     # ballistic motion # commented out for now
-    # plt.figure(figsize=(8,6))
-    # plt.plot(qs, params[:,2], 'o')
-    # plt.xscale('log')
-    # plt.yscale('log')
-    # plt.xlabel(r'$q\,(\mu m^{-1})$')
-    # plt.ylabel(r'Characteristic time $\tau_c (s)$')
-    # plt.axvspan(qs[iqmin], qs[iqmax], color=(0.9,0.9,0.9))
+    v = 'None'
+    if ballistic:
+        plt.figure(figsize=(8,6))
+        plt.plot(qs, params[:,2], 'o')
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel(r'$q\,(\mu m^{-1})$')
+        plt.ylabel(r'Characteristic time $\tau_c (s)$')
+        plt.axvspan(qs[iqmin], qs[iqmax], color=(0.9,0.9,0.9))
 
-    # v = np.exp(-leastsq(
-    #     lambda p, q, td: p - np.log(np.abs(q)) - np.log(np.abs(td)),
-    #     [-1],
-    #     args=(qs[iqmin:iqmax], params[iqmin:iqmax,2])
-    #     )[0][0])
-    # plt.plot([qs[iqmin], qs[iqmax]], 1/(v*np.array([qs[iqmin], qs[iqmax]])), '-r')
-    # print(f"v = {v:.02f} µm²/s")
+        v = np.exp(-leastsq(
+            lambda p, q, td: p - np.log(np.abs(q)) - np.log(np.abs(td)),
+            [-1],
+            args=(qs[iqmin:iqmax], params[iqmin:iqmax,2])
+            )[0][0])
+        plt.plot([qs[iqmin], qs[iqmax]], 1/(v*np.array([qs[iqmin], qs[iqmax]])), '-r')
+        print(f"v = {v:.02f} µm²/s")
+        plt.show()
 
     ### Storing data # https://note.nkmk.me/python-pandas-assign-append/
-    df_add = pd.DataFrame([[dil, stack.fps, qs[iqmin], qs[iqmax], alpha, X, D, D_theory, predicted_a]], index = [video_file.name], columns=df.columns)
+    df_add = pd.DataFrame([[a, dil, stack.fps, stack.frame_count, qs[iqmin], qs[iqmax], alpha, X, D, D_theory, predicted_a, v]], index = [video_file.name], columns=df.columns)
 
     df = pd.concat([df, df_add])
 
 
+print('Resulting data')
 print(df)
-
-plt.figure()
-plt.scatter(df['Dilution'], df['D'])
-plt.ylabel('Calculated D')
-plt.xlabel('Dilution')
-plt.show()
-
-plt.figure()
-plt.scatter(df['Dilution'], df['D'])
-plt.ylabel('Calculated D')
-plt.xlabel('Dilution')
-plt.show()
+df.to_csv(out_dir+'mnc{}_{}_output.csv'.format(maxNCouples, parent_dir_name)) # https://note.nkmk.me/python-pandas-to-csv/#google_vignette
