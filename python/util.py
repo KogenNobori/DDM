@@ -1,6 +1,4 @@
-# importing modules
-# %matplotlib widget # commented out as it caused error for .py script and it functions ok without this line for .py.
-
+# reference https://teclado.com/30-days-of-python/python-30-day-21-multiple-files/
 import os
 import cv2
 import numpy as np
@@ -21,37 +19,8 @@ import re
 # scienceplots
 import scienceplots
 
-# Set environment variables for OpenCV
-os.environ['OPENCV_LOG_LEVEL'] = 'FATAL'
-os.environ['OPENCV_FFMPEG_LOGLEVEL'] = "-8"
-
-# Setting the graph design
-# plt.style.use('science')
-
-############## Variables ##############
-folder_name = '/Volumes/T7 Shield/e1_stand1/data/Concentrationdiff2mium/rt/' # Input the folder to analyse
-out_dir = '/Users/noboriwatarugen/e1/ddm_github_forked/python/csvs/' # remember to add / in the end
-
-pixelSize = 100/844.341 #40x (in micrometre)
-
-pointsPerDecade = 30
-maxNCouples = 3 #10 for fast evaluation, 300 for accurate analysis
-
-kB = 1.38e-23
-T = 273.15+23.1 # measured room temperatur 
-mu = 8.9e-4 # change this value later
-
-ballistic = False
-
-###### Choose the correlation function###
-
-if ballistic: # if ballistic is true, use the correlation function for the ballistic motion
-    LogISF = lambda p, dts: np.log(p[0] * (1-(np.sin(dts/p[2])/(dts/p[2]))) + p[1]) 
-
-else: # correlation function for the Brownian motion
-    LogISF = lambda p, dts: np.log(np.maximum(p[0] * (1 - np.exp(-dts / p[2])) + p[1], 1e-10))
-
-
+# import original modules
+import util
 
 ####### classes and functions defined#######
 class ImageStack(object):
@@ -150,64 +119,11 @@ def calculate_isf(stack, idts, maxNCouples=1000):
         isf[i] = ra(timeAveraged(stack, idt, maxNCouples))
     return isf
 
-# onselect
-def onselect(xmin, xmax):
-    global iqmin, iqmax
-    iqmin= np.searchsorted(qs, xmin)
-    iqmax = np.searchsorted(qs, xmax)
-    print(f"Selected range: {qs[iqmin]:.2f} to {qs[iqmax]:.2f}")
 
 
-p_size_dict = {'2':2, '2p12':2.12, '0_977u':0.977, '1_73u':1.73,'2u':2,'1p73':1.73,'01':0.1,'1':1,'03':0.3,'173':1.73 } # https://www.sejuku.net/blog/24122
 
-
-####Storing the results in dataframe 
-data_columns = ['Particle size','Dilution','Frame rate','Number of frames','qmin', 'qmax','alpha','X','D (Brownian)','D theory (Brownian)','Predicted Diameter (Brownian)', 'Velocity(for ballistic)']
-df = pd.DataFrame(columns = data_columns) # https://pandas.pydata.org/docs/dev/reference/api/pandas.DataFrame.html
-
-# df.to_csv(out_dir+'test.csv')
-
-
-########### Path ########### https://note.nkmk.me/python-pathlib-iterdir-glob/
-folder_path = Path(folder_name) 
-video_file_paths = list(folder_path.glob('*.avi'))  
-print('video file paths', list(map(str, video_file_paths))) # https://note.nkmk.me/python-map-usage/
-print('number of files to analise:', len(video_file_paths))
-parent_dir_name = folder_path.parents[0].name # https://note.nkmk.me/python-pathlib-name-suffix-parent/
-##########################
-
-for video_file in video_file_paths:
-    ##### Extracting information from the filename ####
-    # file_path = Path(video_file) #https://note.nkmk.me/python-pathlib-name-suffix-parent/#google_vignette #https://docs.python.org/ja/3/library/pathlib.html#pathlib.PurePath.name #https://docs.python.org/3.15/library/pathlib.html#
-    print('filename:', video_file.name)
-    dil = int(re.findall('1-(.*?)_',video_file.name)[0]) # https://note.nkmk.me/python-str-extract/#research-refindall
-    print('Dilution:', dil)
-
-    p_size = re.findall('([0-9].*?)m',video_file.name) # https://note.nkmk.me/python-str-extract/#research-refindall
-
-    if len(p_size)==1 and p_size in p_size_dict.keys(): # If the code only catches one string and it matches one of the keys,
-        a = p_size_dict(p_size[0]) #change this to the diameter of the particle in metres
-
-    else:
-        print('Particle size not found. Please input the particle size in micro metre')
-        a = int(input())
-
-
-    ########### Reading the data###########
-    stack = ImageStack(video_file)
-
-
-    ########## calculate isf ###########
-
-    idts = logSpaced(len(stack), pointsPerDecade)
-    dts = idts/stack.fps
-    ISF = calculate_isf(stack, idts, maxNCouples)
-
-    # calculate the scale of wavevectors
-    qs = 2*np.pi/(2*ISF.shape[-1]*pixelSize) * np.arange(ISF.shape[-1])
-    tmax = -1
-
-    # display the isf
+# display isf
+def plot_isf(dts, qs, ISF):
     plt.figure(figsize=(5,5))
     ISF_transposed = np.transpose(ISF)
     plt.imshow(ISF_transposed, cmap='viridis', aspect='auto', extent=[dts[0], dts[-1], qs[-1], qs[0]], norm=LogNorm())
@@ -218,8 +134,8 @@ for video_file in video_file_paths:
     plt.show()
 
 
-    # perform the ISF fitting
-
+# ISF fitting
+def isf_fitting(LogISF, dts, ISF, tmax):
     params = np.zeros((ISF.shape[-1], 3))
     matrixfit = np.zeros(ISF[:tmax].T.shape)
     for iq, ddm in enumerate(ISF[:tmax].T):
@@ -234,20 +150,29 @@ for video_file in video_file_paths:
         # Ensure non-negative values
         matrixfit[iq] = np.exp(LogISF(params[iq], dts[:tmax]))
 
-
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(qs, params[:, 2], 'o')
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.set_xlabel(r'$q\ [\mu m^{-1}$]')
-    ax.set_ylabel(r'Characteristic time $\tau_c\ [s]$')
-    ax.set_title('Click and drag to select a valid range of q values')
-
-    span = SpanSelector(ax, onselect, 'horizontal', useblit=True, interactive=True, props=dict(alpha=0.5, facecolor='red'))
-    plt.show()
+    return params, matrixfit
 
 
-    # show A and B
+def isf_fitting2(LogISF, dts, ISF, tmax):
+    params = np.zeros((ISF.shape[-1], 3))
+    matrixfit = np.zeros(ISF[:tmax].T.shape)
+    for iq, ddm in enumerate(ISF[:tmax].T):
+        params[iq] = leastsq(
+            # function to minimize
+            lambda p, dts, logd: LogISF(p, dts) - logd,
+            # initial parameters
+            [np.ptp(ISF), ddm.min(), 1, 1, 0.5],
+            # data on which to perform minimization
+            args=(dts[:tmax], np.log(ddm))
+        )[0]
+        # Ensure non-negative values
+        matrixfit[iq] = np.exp(LogISF(params[iq], dts[:tmax]))
+
+    return params, matrixfit
+
+
+# show A and B
+def plot_AB(qs, params, iqmin, iqmax):
     plt.figure(figsize=(8,6))
     plt.title('Fit parameters A(q) and B(q)')
     plt.plot(qs, params[:,0], 'o', label="A(q)")
@@ -262,7 +187,8 @@ for video_file in video_file_paths:
     plt.ylim((1e3,1e11))
     plt.show()
 
-    # result of the fit function
+# result of the fit function
+def plot_result_fit(dts, qs, matrixfit, ISF, iqmin, iqmax, tmax):
     plt.figure(figsize=(14,8))
     ax1 = subplot(1,2,1)
     for i in range(0,len(dts[:tmax]),5):
@@ -286,8 +212,7 @@ for video_file in video_file_paths:
     plt.ylim(10, 1e5)
     plt.show()
 
-
-    # ISF for various q for function of tau and q**2r
+def plot_isf_4_q(dts, qs, params, ISF, iqmin, iqmax, tmax):
     plt.figure(figsize=(14,8))
     ax1 = plt.subplot(1,2,1)
     for i,iq in enumerate(np.logspace(np.log10(iqmin),np.log10(iqmax),10, base=10).astype(int)):
@@ -309,7 +234,9 @@ for video_file in video_file_paths:
 
     plt.show()
 
-    #free exponent
+
+# free exponent fitting
+def fr_exp_fit(qs, params, iqmin, iqmax):
     plt.figure(figsize=(8,6))
     plt.plot(qs, params[:,2], 'o')
     plt.xscale('log')
@@ -329,70 +256,49 @@ for video_file in video_file_paths:
 
     plt.show()
 
-    print(f"alpha = {alpha:.02f}")
-    print(f"X = {X:.02f}")
+    return X, alpha
 
-    D = 'None'
-    D_theory = 'None'
-    Diameter = 'None'
+# Brownian motion fitting
+def brown_d(qs, params, iqmin, iqmax):
+    plt.figure(figsize=(8,6))
+    plt.plot(qs, params[:,2], 'o')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel(r'$q\,(\mu m^{-1})$')
+    plt.ylabel(r'Characteristic time $\tau_c (s)$')
+    plt.axvspan(qs[iqmin], qs[iqmax], color=(0.9,0.9,0.9))
+    D = np.exp(-leastsq(
+        lambda p, q, td: p[0] - 2*np.log(q) - np.log(td),
+        [-1.],
+        args=(qs[iqmin:iqmax], params[iqmin:iqmax,2])
+        )[0][0])
+    plt.plot([qs[iqmin], qs[iqmax]], 1/(D*np.array([qs[iqmin], qs[iqmax]])**2), '-r')
+    plt.title("Slope forced to -2")
 
-    if not ballistic:
-        # Brownian motion
-        plt.figure(figsize=(8,6))
-        plt.plot(qs, params[:,2], 'o')
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.xlabel(r'$q\,(\mu m^{-1})$')
-        plt.ylabel(r'Characteristic time $\tau_c (s)$')
-        plt.axvspan(qs[iqmin], qs[iqmax], color=(0.9,0.9,0.9))
-        D = np.exp(-leastsq(
-            lambda p, q, td: p[0] - 2*np.log(q) - np.log(td),
-            [-1.],
-            args=(qs[iqmin:iqmax], params[iqmin:iqmax,2])
-            )[0][0])
-        plt.plot([qs[iqmin], qs[iqmax]], 1/(D*np.array([qs[iqmin], qs[iqmax]])**2), '-r')
-        plt.title("Slope forced to -2")
+    plt.show()
 
-        plt.show()
-        print(f"D = {D:.02f} µm²/s")
+    return D
 
+# ballistic motion
+def ballistic(qs, params, iqmin, iqmax):
+    plt.figure(figsize=(8,6))
+    plt.plot(qs, params[:,2], 'o')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel(r'$q\,(\mu m^{-1})$')
+    plt.ylabel(r'Characteristic time $\tau_c (s)$')
+    plt.axvspan(qs[iqmin], qs[iqmax], color=(0.9,0.9,0.9))
 
+    v = np.exp(-leastsq(
+        lambda p, q, td: p - np.log(np.abs(q)) - np.log(np.abs(td)),
+        [-1],
+        args=(qs[iqmin:iqmax], params[iqmin:iqmax,2])
+        )[0][0])
+    plt.plot([qs[iqmin], qs[iqmax]], 1/(v*np.array([qs[iqmin], qs[iqmax]])), '-r')
+    plt.show()
 
-        # D theory
-        D_theory = kB*T/(3*np.pi*mu*a) * 1e12
-        print(f"D theory = {D_theory:.02f} µm²/s")
-
-        # estimate the size of the particle
-        predicted_a = kB*T/(3*np.pi*mu*D) *1e12*1e6
-        print(f"Diameter = {predicted_a:.02f} µm")
-
-
-    # ballistic motion # commented out for now
-    v = 'None'
-    if ballistic:
-        plt.figure(figsize=(8,6))
-        plt.plot(qs, params[:,2], 'o')
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.xlabel(r'$q\,(\mu m^{-1})$')
-        plt.ylabel(r'Characteristic time $\tau_c (s)$')
-        plt.axvspan(qs[iqmin], qs[iqmax], color=(0.9,0.9,0.9))
-
-        v = np.exp(-leastsq(
-            lambda p, q, td: p - np.log(np.abs(q)) - np.log(np.abs(td)),
-            [-1],
-            args=(qs[iqmin:iqmax], params[iqmin:iqmax,2])
-            )[0][0])
-        plt.plot([qs[iqmin], qs[iqmax]], 1/(v*np.array([qs[iqmin], qs[iqmax]])), '-r')
-        print(f"v = {v:.02f} µm²/s")
-        plt.show()
-
-    ### Storing data # https://note.nkmk.me/python-pandas-assign-append/
-    df_add = pd.DataFrame([[a, dil, stack.fps, stack.frame_count, qs[iqmin], qs[iqmax], alpha, X, D, D_theory, predicted_a, v]], index = [video_file.name], columns=df.columns)
-
-    df = pd.concat([df, df_add])
+    return v
 
 
-print('Resulting data')
-print(df)
-df.to_csv(out_dir+'mnc{}_{}_output.csv'.format(maxNCouples, parent_dir_name)) # https://note.nkmk.me/python-pandas-to-csv/#google_vignette
+
+
