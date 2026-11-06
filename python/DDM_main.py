@@ -19,9 +19,12 @@ import pandas as pd
 import re
 # scienceplots
 import scienceplots
+# Using scipy
+import scipy
 
 # import original modules
 import util
+import core
 
 # Set environment variables for OpenCV
 os.environ['OPENCV_LOG_LEVEL'] = 'FATAL'
@@ -38,7 +41,7 @@ def onselect(xmin, xmax):
     print('\n')
     print(f"Selected range: {qs[iqmin]:.2f} to {qs[iqmax]:.2f}")
 
-def select_valid_q(qs, params, param_col):
+def select_valid_q(qs, params, param_col, label=None):
     # span selector
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.plot(qs, params[:, param_col], 'o') #Choose the column of 
@@ -46,7 +49,7 @@ def select_valid_q(qs, params, param_col):
     ax.set_yscale('log')
     ax.set_xlabel(r'$q\ [\mu m^{-1}$]')
     ax.set_ylabel(r'Characteristic time $\tau_c\ [s]$')
-    ax.set_title('Click and drag to select a valid range of q values')
+    ax.set_title('Click and drag to select a valid range of q values. Label: {}'.format(label))
 
     span = SpanSelector(ax, onselect, 'horizontal', useblit=True, interactive=True, props=dict(alpha=0.5, facecolor='red'))
     plt.show()
@@ -55,23 +58,43 @@ def select_valid_q(qs, params, param_col):
 ################################################
 #########        change below       ############
 ################################################
-folder_name = '/Volumes/T7 Shield/e1_stand1/data/Concentrationdiff2mium/rt' # Input the folder to analyse
+folder_name = '/Volumes/T7 Shield/e1_stand1/data/mixed_with_new_conc_calibration/mixed_videos/2/27' # Input the folder to analyse
 out_dir = '/Users/noboriwatarugen/e1/ddm_github_forked/python/csvs/' # remember to add / in the end
 
-pixelSize = 100/844.341 #40x (in micrometre)
+lense = 40 
+
+if lense ==40:
+    pixelSize = 100/844.341 #40x (in micrometre)
 
 pointsPerDecade = 30
-maxNCouples = 3 #10 for fast evaluation, 300 for accurate analysis
+maxNCouples = 10 #10 for fast evaluation, 300 for accurate analysis
 
 kB = 1.38e-23
-T = 273.15+23.1 # measured room temperatur 
-mu = 8.9e-4 # change this value later
+T = 273.15+23.1 # measured room temperature
+
+# Reference: Likhachev, E. R. Dependence of water viscosity on temperature and pressure. Tech. Phys. 48, 514–515 (2003).
+
+E = 4.753*1e3 #J/mol
+eta_0 = 2.4055*1e-5 #Pa s
+theta = 139.7 #K
+a_const = 4.42 * 1e-4 #bar-1
+b_const = 9.565* 1e-4 *1e3 #J/(mol bar)
+c_const = 1.24e-2 #K/bar
+
+
+p = 1 #bar
+T = 273.15+23.1 #K
+
+eta = eta_0*np.exp(a_const*p+(E-b_const*p)/(scipy.constants.R*(T-theta-c_const*p)))
+
+
+mu = eta # viscosity
 
 ballistic = False # Input true if it is ballistic
 save = True # Input true if you want to save the results in the csv file
-no_p_size = 1 #Input the number different kinds of particles.
+no_p_size = 2 #Input the number different kinds of particles.
+# neglect_negative =True # Whether to neglect negative values in characteristic time when fitting tauc vs q
 additional_plots = True
-
 
 ################################################
 #############  change above ####################
@@ -100,7 +123,17 @@ p_size_dict = {'2':2, '2p12':2.12, '0_977u':0.977, '1_73u':1.73,'2u':2,'1p73':1.
 
 
 ####Storing the results in dataframe 
-data_columns = ['Particle size','Dilution','Frame rate','Number of frames','qmin', 'qmax','alpha','X','D (Brownian)','D theory (Brownian)','Predicted Diameter (Brownian)', 'Velocity(for ballistic)']
+data_columns = ['lense','stack.fps', 'stack.frame_count','a_i', 'a_ii', 'dil_i', 'dil_ii', 'D_theory_i', 'D_theory_ii','qs[iqmin1]', 'qs[iqmax1]', 'alpha1','X1', 'D1', 'predicted_a1',  'alphar1','Xr1', 'predicted_a_ransac_free1', 'v1', 'qs[iqmin2]', 
+                'qs[iqmax2]', 
+                'alpha2', 
+                'X2', 
+                'D2',  
+                'predicted_a2', 
+                'alphar2',
+                'Xr2',
+                'predicted_a_ransac_free2',
+                'v2'
+                ] 
 df = pd.DataFrame(columns = data_columns) # https://pandas.pydata.org/docs/dev/reference/api/pandas.DataFrame.html
 
 # df.to_csv(out_dir+'test.csv')
@@ -125,9 +158,6 @@ for video_file in video_file_paths:
     # file_path = Path(video_file) #https://note.nkmk.me/python-pathlib-name-suffix-parent/#google_vignette #https://docs.python.org/ja/3/library/pathlib.html#pathlib.PurePath.name #https://docs.python.org/3.15/library/pathlib.html#
     print('File being analysed:', video_file.name)
 
-    # Dilution
-    dil = int(re.findall('1-(.*?)_',video_file.name)[0]) # https://note.nkmk.me/python-str-extract/#research-refindall
-    print('Dilution:', dil)
 
 
     # Particle size
@@ -139,24 +169,60 @@ for video_file in video_file_paths:
 
     if no_p_size==1 and len(p_size)==1 and p_size[0] in p_size_dict.keys(): # If the code only catches one string and it matches one of the keys,
         a = p_size_dict[p_size[0]] #change this to the diameter of the particle in metres
+        # Dilution
+        # dil = int(re.findall('1-(.*?)_',video_file.name)[0]) # https://note.nkmk.me/python-str-extract/#research-refindall
+
+        print('Input the dilution:')
+        dil = int(input())
+
+        print('\n')
+        print('Particle size:', a*1e6,'µm')
+        print('Dilution:', dil)
+        print('\n')
 
     else:
         if no_p_size==1:
             print('Particle size not found. Please input the particle size in micro metre:')
             a = float(input())*1e-6
+
+            print('Input the dilution:')
+            dil = int(input())
+
+            print('\n')
+            print('Particle size:', a*1e6,'µm')
+            print('Dilution:', dil)
+            print('\n')
+
         elif no_p_size==2:
             print('Please input the first particle size in micro metre:')
-            a1 = float(input())*1e-6
-            print('Please input the second particle size in micro metre:')
-            a2 = float(input())*1e-6
+            a_i = float(input())*1e-6
 
-    print('\n')
-    print('Particle size in micro metre:', a*1e6,'µm')
-    print('\n')
+            print('Input the dilution of the first particle:')
+            dil_i = int(input())
+
+
+            print('Please input the second particle size in micro metre:')
+            a_ii = float(input())*1e-6
+
+            print('Input the dilution of the second particle:')
+            dil_ii = int(input())
+
+            print('\n')
+            print('Particle size1:', a_i*1e6,'µm')
+            print('Dilution1:', dil_i)
+            print('Particle size2:', a_ii*1e6,'µm')
+            print('Dilution2:', dil_ii)
+            print('\n')
+
+    
 
 
     ########### Reading the data###########
     stack = util.ImageStack(video_file)
+    #Plotting the first frame
+    # plt.imshow(stack[0])
+    # plt.title('First frame')
+    # plt.show()
 
     ########## calculate isf ###########
     idts = util.logSpaced(len(stack), pointsPerDecade)
@@ -179,135 +245,108 @@ for video_file in video_file_paths:
 
 
         # span selector
-        select_valid_q(qs, params, 2)
+        select_valid_q(qs, params, param_col=2) # Input the column index of params that is used for the fitting
+
+        X, alpha, D, predicted_a, v = core.core(qs, dts, ISF, params, matrixfit, iqmin, iqmax, tmax, kB, T, mu, additional_plots, ballistic, no_p_size, param_col=2)
+
+        D_theory = util.calc_d_theory(kB, T, mu, a)
 
 
-        # show A and B
-        if additional_plots:
-            # show A and B
-            util.plot_AB(qs, params, iqmin, iqmax)
-
-            # result of the fit function
-            util.plot_result_fit(dts, qs, matrixfit, ISF, iqmin, iqmax, tmax)
-
-            # ISF for various q for function of tau and q**2r
-            util.plot_isf_4_q(dts, qs, params, ISF, iqmin, iqmax, tmax)
-
-        #free exponent
-        X, alpha = util.fr_exp_fit(qs, params, iqmin, iqmax)
-
-        print('\n')
-        print('Free exponent fitting results:')
-        print(f"alpha = {alpha:.02f}")
-        print(f"X = {X:.02f}")
-        print('\n')
-
-        D = 'None'
-        D_theory = 'None'
-        Diameter = 'None'
-        predicted_a = 'None'
-
-        if not ballistic:
-            # Brownian motion
-            D = util.brown_d(qs, params, iqmin, iqmax)
-            print('Brownian results:')
-            print(f"D = {D:.02f} µm²/s")
+        # #### Storing data # https://note.nkmk.me/python-pandas-assign-append/
+        # df_add = pd.DataFrame([[lense, stack.fps, stack.frame_count,a, 'None', dil, 'None', qs[iqmin], qs[iqmax], alpha, X, D, D_theory, predicted_a, v, 'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None']], index = [video_file.name], columns=df.columns)
+    
+        # df = pd.concat([df, df_add])
+        # print('\n')
+        # print("Current data:")
+        # print(df)
 
 
-            # D theory
-            D_theory = kB*T/(3*np.pi*mu*a) * 1e12
-            # print('raw D theory', D_theory)
-            print(f"D theory = {D_theory:.02f} µm²/s")
-
-            # estimate the size of the particle
-            predicted_a = kB*T/(3*np.pi*mu*D) *1e12*1e6
-            print(f"Precicted Diameter = {predicted_a:.02f} µm")
-            print(f"Manufactured Diameter = {a*1e6:.02f} µm")
-            print('\n')
-            print('\n')
 
 
-        # ballistic motion 
-        v = 'None'
-        if ballistic:
-            v = util.ballistic(qs, params, iqmin, iqmax)
-            print('Ballistic results:')
-            print(f"v = {v:.02f} µm²/s")
-            print('\n')
-            print('\n')
+        
 
     if no_p_size==2:
-            # perform the ISF fitting
-            params, matrixfit = util.isf_fitting2(LogISF, dts, ISF, tmax)
-    
-    
-            # span selector
-            fig, ax = plt.subplots(figsize=(8, 6))
-            ax.plot(qs, params[:, 2], 'o')
-            ax.set_xscale('log')
-            ax.set_yscale('log')
-            ax.set_xlabel(r'$q\ [\mu m^{-1}$]')
-            ax.set_ylabel(r'Characteristic time $\tau_c\ [s]$')
-            ax.set_title('Click and drag to select a valid range of q values')
-    
-            span = SpanSelector(ax, onselect, 'horizontal', useblit=True, interactive=True, props=dict(alpha=0.5, facecolor='red'))
-            plt.show()
-    
-    
-            # show A and B
-            if additional_plots:
-                # show A and B
-                util.plot_AB(qs, params, iqmin, iqmax)
-    
-                # result of the fit function
-                util.plot_result_fit(dts, qs, matrixfit, ISF, iqmin, iqmax, tmax)
-    
-                # ISF for various q for function of tau and q**2r
-                util.plot_isf_4_q(dts, qs, params, ISF, iqmin, iqmax, tmax)
-    
-            #free exponent
-            X, alpha = util.fr_exp_fit(qs, params, iqmin, iqmax)
-    
-            print('\n')
-            print('Free exponent fitting results:')
-            print(f"alpha = {alpha:.02f}")
-            print(f"X = {X:.02f}")
-            print('\n')
-    
-            D = 'None'
-            D_theory = 'None'
-            predicted_a = 'None'
-    
-            
-            # Brownian motion
-            D = util.brown_d(qs, params, iqmin, iqmax)
-            print('Brownian results:')
-            print(f"D = {D:.02f} µm²/s")
+        # perform the ISF fitting
+        params, matrixfit = util.isf_fitting2(LogISF, dts, ISF, tmax)
 
+        # First particle
+        print('Analysis of the first particle')
+        label='First particle'
+        # span selector
+        select_valid_q(qs, params, param_col=2, label=label) # https://www.geeksforgeeks.org/python/keyword-and-positional-argument-in-python/
 
-            # D theory
-            D_theory = kB*T/(3*np.pi*mu*a) * 1e12
-            # print('raw D theory', D_theory)
-            print(f"D theory = {D_theory:.02f} µm²/s")
+        iqmin1 = iqmin
+        iqmax1 = iqmax
 
-            # estimate the size of the particle
-            predicted_a = kB*T/(3*np.pi*mu*D) *1e12*1e6
-            print(f"Precicted Diameter = {predicted_a:.02f} µm")
-            print(f"Manufactured Diameter = {a*1e6:.02f} µm")
-            print('\n')
-            print('\n')
+        X1, alpha1, D1, predicted_a1, Xr1, alphar1, predicted_a_ransac_free1, v1 = core.core(qs, dts, ISF, params, matrixfit, iqmin, iqmax, tmax, kB, T, mu, additional_plots, ballistic, no_p_size,param_col=2, label=label)
+
+        # Second particle
+        print('Analysis of the second particle')
+        label='Second particle'
+        # span selector
+        select_valid_q(qs, params, param_col=3, label=label)
+
+        iqmin2 = iqmin
+        iqmax2 = iqmax
+
+        X2, alpha2, D2, predicted_a2, Xr2, alphar2, predicted_a_ransac_free2, v2 = core.core(qs, dts, ISF, params, matrixfit, iqmin, iqmax, tmax, kB, T, mu, additional_plots, ballistic,  no_p_size, param_col=3, label=label)
+
+        D_theory_i = util.calc_d_theory(kB, T, mu, a_i)
+        D_theory_ii = util.calc_d_theory(kB, T, mu, a_ii)
+
+        print('\n')
+        print('Particle sizes:', a_i, a_ii)
+        print('D_theory:', D_theory_i, D_theory_ii)
+        print('Calculated D:', D1, D2)
+        print('Predicted particle sizes:',predicted_a1, predicted_a2)
+        print('Predicted particle sizes (RANSAC free exponent):',predicted_a_ransac_free1, predicted_a_ransac_free2)
 
 
 
+        ### Storing data # https://note.nkmk.me/python-pandas-assign-append/
+        df_add = pd.DataFrame([[lense,
+                                 stack.fps, 
+                                 stack.frame_count,
+                                 a_i, 
+                                 a_ii, 
+                                 dil_i, 
+                                 dil_ii, 
+                                 D_theory_i, 
+                                 D_theory_ii,
+                                 qs[iqmin1], 
+                                 qs[iqmax1], 
+                                 alpha1,
+                                 X1, 
+                                 D1, 
+                                 predicted_a1, 
+                                 alphar1,
+                                 Xr1,
+                                 predicted_a_ransac_free1,
+                                 v1, 
+                                 qs[iqmin2], 
+                                 qs[iqmax2], 
+                                 alpha2, 
+                                 X2, 
+                                 D2,  
+                                 predicted_a2, 
+                                 alphar2,
+                                 Xr2,
+                                 predicted_a_ransac_free2,
+                                 v2
+                                 ]], 
+                                 index = [video_file.name], 
+                                 columns=df.columns)
+
+        df = pd.concat([df, df_add])
+        print('\n')
+        print("Current data:")
+        print(df)      
 
 
 
-    #### Storing data # https://note.nkmk.me/python-pandas-assign-append/
-    df_add = pd.DataFrame([[a, dil, stack.fps, stack.frame_count, qs[iqmin], qs[iqmax], alpha, X, D, D_theory, predicted_a, v]], index = [video_file.name], columns=df.columns)
-
-    df = pd.concat([df, df_add])
 
 
+print('\n')
 print('Resulting data')
 print(df)
 
